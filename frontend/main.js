@@ -34,6 +34,7 @@ const YAKU_NAMES = {
   chinroutou: "清老頭",
   chuurenpoutou: "九蓮宝燈",
   kokushi_musou: "国士無双",
+  suukantsu: "四槓子",
   yakuhai_白: "役牌（白）",
   yakuhai_發: "役牌（發）",
   yakuhai_中: "役牌（中）",

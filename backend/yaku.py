@@ -289,6 +289,11 @@ def _check_yakuman(pattern, all_mentsu, melds, win_tile, win_type, all_tiles, is
     if all(is_yaochuuhai(t) and not is_jihai(t) for t in all_tiles):
         yakuman.append({"name": "chinroutou", "han_closed": 13, "han_open": 13, "is_yakuman": True})
 
+    # 四槓子
+    kan_count = sum(1 for m in melds if m["type"] in ("minkan", "ankan"))
+    if kan_count == 4:
+        yakuman.append({"name": "suukantsu", "han_closed": 13, "han_open": 13, "is_yakuman": True})
+
     # 九蓮宝燈（門前のみ）
     if is_closed:
         suits = {get_suit(t) for t in all_tiles}
