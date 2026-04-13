@@ -60,14 +60,15 @@ document.getElementById("add-meld").addEventListener("click", () => {
   div.innerHTML = `
     <div class="field" style="margin:0">
       <label>種別</label>
-      <select data-role="meld-type">
+      <select data-role="meld-type" onchange="updateMeldPlaceholder(this)">
         <option value="chi">チー</option>
         <option value="pon">ポン</option>
-        <option value="kan">カン</option>
+        <option value="minkan">明槓</option>
+        <option value="ankan">暗槓</option>
       </select>
     </div>
     <div class="field" style="margin:0">
-      <label>牌（スペース区切り）</label>
+      <label>牌</label>
       <input type="text" data-role="meld-tiles" placeholder="例: 3m 4m 5m" />
     </div>
     <button class="btn-danger" onclick="removeMeld(this)">削除</button>
@@ -77,6 +78,17 @@ document.getElementById("add-meld").addEventListener("click", () => {
 
 function removeMeld(btn) {
   btn.closest(".meld-item").remove();
+}
+
+function updateMeldPlaceholder(select) {
+  const input = select.closest(".meld-item").querySelector('[data-role="meld-tiles"]');
+  const placeholders = {
+    chi:    "例: 3m 4m 5m（3枚）",
+    pon:    "例: 中（1枚）",
+    minkan: "例: 中（1枚）",
+    ankan:  "例: 中（1枚）",
+  };
+  input.placeholder = placeholders[select.value] || "";
 }
 
 // 計算ボタン
@@ -119,10 +131,21 @@ function buildRequest() {
   document.querySelectorAll(".meld-item").forEach((item) => {
     const type = item.querySelector('[data-role="meld-type"]').value;
     const tilesRaw = item.querySelector('[data-role="meld-tiles"]').value.trim();
-    const tiles = tilesRaw.split(/\s+/).filter(Boolean);
-    if (tiles.length > 0) {
-      melds.push({ type, tiles });
+    const inputTiles = tilesRaw.split(/\s+/).filter(Boolean);
+    if (inputTiles.length === 0) return;
+
+    let tiles;
+    if (type === "pon") {
+      // 1枚入力で3枚に展開
+      tiles = Array(3).fill(inputTiles[0]);
+    } else if (type === "minkan" || type === "ankan") {
+      // 1枚入力で4枚に展開
+      tiles = Array(4).fill(inputTiles[0]);
+    } else {
+      // チーはそのまま（3枚入力）
+      tiles = inputTiles;
     }
+    melds.push({ type, tiles });
   });
 
   const doraRaw = document.getElementById("dora").value.trim();

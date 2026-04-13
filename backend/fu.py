@@ -9,7 +9,8 @@ def calculate_fu(pattern: dict, special_type, melds: list, win_tile: str, win_ty
 
     jantai = pattern["jantai"]
     mentsu_list = pattern["mentsu"]
-    is_open = len(melds) > 0
+    # 暗槓は門前扱い（チー・ポン・明槓があるときのみ open）
+    is_open = any(m["type"] in ("chi", "pon", "minkan") for m in melds)
 
     seat_wind = WIND_TO_TILE.get(context.seat_wind, "東")
     round_wind = WIND_TO_TILE.get(context.round_wind, "東")
@@ -35,9 +36,10 @@ def calculate_fu(pattern: dict, special_type, melds: list, win_tile: str, win_ty
 
     # 面子符（副露）
     for meld in melds:
-        is_kan = meld["type"] == "kan"
+        is_kan = meld["type"] in ("minkan", "ankan")
+        is_concealed = meld["type"] == "ankan"   # 暗槓は暗刻扱い
         m = {"type": "shuntsu" if meld["type"] == "chi" else "koutsu", "tiles": meld["tiles"], "is_kan": is_kan}
-        mentsu_fu += _calc_mentsu_fu(m, win_tile, win_type, is_concealed=False)
+        mentsu_fu += _calc_mentsu_fu(m, win_tile, win_type, is_concealed=is_concealed)
 
     # 雀頭符
     jantai_fu = 0

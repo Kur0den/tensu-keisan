@@ -94,7 +94,8 @@ def _evaluate(pattern, special_type, melds, win_tile, win_type, context, all_til
         return None
 
     fu = calculate_fu(pattern, special_type, melds, win_tile, win_type, context)
-    is_open = len(melds) > 0
+    # 暗槓は門前扱いのため、チー・ポン・明槓があるときのみ open
+    is_open = any(m["type"] in ("chi", "pon", "minkan") for m in melds)
     has_yakuman = any(y["is_yakuman"] for y in yaku_list)
 
     if has_yakuman:

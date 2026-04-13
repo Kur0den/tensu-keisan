@@ -5,8 +5,13 @@ from tiles import (
 )
 
 
+def is_hand_open(melds: list) -> bool:
+    """チー・ポン・明槓があれば手を開いているとみなす（暗槓は門前扱い）"""
+    return any(m["type"] in ("chi", "pon", "minkan") for m in melds)
+
+
 def detect_yaku(pattern: dict, special_type, melds: list, win_tile: str, win_type: str, context, all_tiles: list) -> list:
-    is_closed = len(melds) == 0
+    is_closed = not is_hand_open(melds)
 
     if special_type == "kokushi":
         return [{"name": "kokushi_musou", "han_closed": 13, "han_open": 0, "is_yakuman": True}]
@@ -37,7 +42,7 @@ def detect_yaku(pattern: dict, special_type, melds: list, win_tile: str, win_typ
     _add_ittsu(yaku_list, all_mentsu)
     _add_chanta_junchan(yaku_list, pattern, all_mentsu)
     _add_toitoi(yaku_list, all_mentsu)
-    _add_sanankou(yaku_list, pattern["mentsu"], win_tile, win_type)
+    _add_sanankou(yaku_list, pattern["mentsu"], melds, win_tile, win_type)
     _add_shousangen(yaku_list, all_mentsu, pattern["jantai"])
     _add_honroutou(yaku_list, all_tiles)
     _add_yakuhai(yaku_list, all_mentsu, context)
@@ -47,17 +52,18 @@ def detect_yaku(pattern: dict, special_type, melds: list, win_tile: str, win_typ
 
 
 def _build_all_mentsu(pattern: dict, melds: list) -> list:
-    closed_mentsu = pattern["mentsu"]
+    closed_mentsu = [dict(m, is_open=False, is_kan=False) for m in pattern["mentsu"]]
     open_mentsu = [
         {
             "type": "shuntsu" if m["type"] == "chi" else "koutsu",
             "tiles": m["tiles"],
-            "is_open": True,
-            "is_kan": m["type"] == "kan",
+            "is_open": m["type"] != "ankan",   # 暗槓は門前扱い
+            "is_kan": m["type"] in ("minkan", "ankan"),
+            "is_ankan": m["type"] == "ankan",
         }
         for m in melds
     ]
-    return [dict(m, is_open=False, is_kan=False) for m in closed_mentsu] + open_mentsu
+    return closed_mentsu + open_mentsu
 
 
 def _add_context_yaku(yaku_list, is_closed, win_type, context):
@@ -173,7 +179,7 @@ def _add_toitoi(yaku_list, all_mentsu):
         yaku_list.append({"name": "toitoi", "han_closed": 2, "han_open": 2, "is_yakuman": False})
 
 
-def _add_sanankou(yaku_list, mentsu_list, win_tile, win_type):
+def _add_sanankou(yaku_list, mentsu_list, melds, win_tile, win_type):
     concealed_koutsu = 0
     for m in mentsu_list:
         if m["type"] != "koutsu":
@@ -182,6 +188,8 @@ def _add_sanankou(yaku_list, mentsu_list, win_tile, win_type):
         if win_tile in m["tiles"] and win_type == "ron":
             continue
         concealed_koutsu += 1
+    # 暗槓も暗刻としてカウント
+    concealed_koutsu += sum(1 for m in melds if m["type"] == "ankan")
     if concealed_koutsu >= 3:
         yaku_list.append({"name": "sanankou", "han_closed": 2, "han_open": 2, "is_yakuman": False})
 
@@ -239,13 +247,14 @@ def _check_yakuman(pattern, all_mentsu, melds, win_tile, win_type, all_tiles, is
     if len(sangen_koutsu) == 3:
         yakuman.append({"name": "daisangen", "han_closed": 13, "han_open": 13, "is_yakuman": True})
 
-    # 四暗刻（門前のみ）
-    if is_closed:
+    # 四暗刻（チー・ポン・明槓がない場合）
+    if not any(m["type"] in ("chi", "pon", "minkan") for m in melds):
         concealed_koutsu = sum(
             1 for m in mentsu_list
             if m["type"] == "koutsu" and not (win_tile in m["tiles"] and win_type == "ron")
         )
-        if concealed_koutsu == 4:
+        ankan_count = sum(1 for m in melds if m["type"] == "ankan")
+        if concealed_koutsu + ankan_count == 4:
             yakuman.append({"name": "suuankou", "han_closed": 13, "han_open": 0, "is_yakuman": True})
 
     # 小四喜・大四喜

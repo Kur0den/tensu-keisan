@@ -3,7 +3,7 @@ from typing import List, Optional, Literal
 
 
 class Meld(BaseModel):
-    type: Literal["chi", "pon", "kan"]
+    type: Literal["chi", "pon", "minkan", "ankan"]
     tiles: List[str]
 
 
