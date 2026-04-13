@@ -177,12 +177,19 @@ function renderResult(data, container) {
   }
 
   const isYakuman = data.yaku.some((y) => y.is_yakuman);
+  const yakumanMultiplier = isYakuman ? data.han_total / 13 : 0;
+  const yakumanLabel = ["", "役満", "ダブル役満", "トリプル役満"][yakumanMultiplier] ?? `${yakumanMultiplier}倍役満`;
 
   // 役タグ
   const yakuHtml = data.yaku
     .map((y) => {
       const name = YAKU_NAMES[y.name] || y.name;
-      const hanStr = y.is_yakuman ? "役満" : `${y.han_closed}翻`;
+      let hanStr;
+      if (y.is_yakuman) {
+        hanStr = (y.yakuman_multiplier ?? 1) >= 2 ? "ダブル役満" : "役満";
+      } else {
+        hanStr = `${y.han_closed}翻`;
+      }
       const cls = y.is_yakuman ? "yaku-tag yakuman" : "yaku-tag";
       return `<span class="${cls}">${name}（${hanStr}）</span>`;
     })
@@ -190,7 +197,7 @@ function renderResult(data, container) {
 
   // 翻符
   const hanFuHtml = isYakuman
-    ? `<div class="han-fu">役満</div>`
+    ? `<div class="han-fu">${yakumanLabel}</div>`
     : `<div class="han-fu"><span>${data.han_total}翻</span> ${data.fu_total}符</div>`;
 
   // 点数

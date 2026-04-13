@@ -23,9 +23,11 @@ OYA_TABLE = {
 def calculate_score(han: int, fu: int, win_type: str, is_dealer: bool) -> ScoreResult:
     basic_points = fu * (2 ** (han + 2))
 
-    # カテゴリ判定
+    # 役満以上: hanが13の倍数で渡されるので倍率を計算
     if han >= 13:
-        return _fixed_payment(OYA_TABLE["yakuman"] if is_dealer else KO_TABLE["yakuman"], win_type, is_dealer)
+        multiplier = han // 13  # 1=役満, 2=ダブル役満, ...
+        base = OYA_TABLE["yakuman"] if is_dealer else KO_TABLE["yakuman"]
+        return _fixed_payment(base * multiplier, win_type, is_dealer)
     elif han >= 11:
         return _fixed_payment(OYA_TABLE["sanbaiman"] if is_dealer else KO_TABLE["sanbaiman"], win_type, is_dealer)
     elif han >= 8:

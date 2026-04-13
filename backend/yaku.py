@@ -14,7 +14,14 @@ def detect_yaku(pattern: dict, special_type, melds: list, win_tile: str, win_typ
     is_closed = not is_hand_open(melds)
 
     if special_type == "kokushi":
-        return [{"name": "kokushi_musou", "han_closed": 13, "han_open": 0, "is_yakuman": True}]
+        # 十三面待ち判定: 和了牌を除いた13枚が么九牌13種を各1枚ずつなら十三面待ち
+        tiles_13 = list(all_tiles)
+        tiles_13.remove(win_tile)
+        from tiles import KOKUSHI_TILES, sort_tiles
+        is_juusanmen = sort_tiles(tiles_13) == sort_tiles(KOKUSHI_TILES)
+        multiplier = 2 if is_juusanmen else 1
+        return [{"name": "kokushi_musou", "han_closed": 13, "han_open": 0,
+                 "is_yakuman": True, "yakuman_multiplier": multiplier}]
 
     yaku_list = []
 
@@ -255,12 +262,18 @@ def _check_yakuman(pattern, all_mentsu, melds, win_tile, win_type, all_tiles, is
         )
         ankan_count = sum(1 for m in melds if m["type"] == "ankan")
         if concealed_koutsu + ankan_count == 4:
-            yakuman.append({"name": "suuankou", "han_closed": 13, "han_open": 0, "is_yakuman": True})
+            # 四暗刻単騎待ちはダブル役満
+            wait_type = _get_wait_type(pattern, win_tile)
+            multiplier = 2 if wait_type == "tanki" else 1
+            yakuman.append({"name": "suuankou", "han_closed": 13, "han_open": 0,
+                            "is_yakuman": True, "yakuman_multiplier": multiplier})
 
     # 小四喜・大四喜
     wind_koutsu = [m for m in all_mentsu if m["type"] == "koutsu" and m["tiles"][0] in WINDS]
     if len(wind_koutsu) == 4:
-        yakuman.append({"name": "daisuushii", "han_closed": 13, "han_open": 13, "is_yakuman": True})
+        # 大四喜はダブル役満
+        yakuman.append({"name": "daisuushii", "han_closed": 13, "han_open": 13,
+                        "is_yakuman": True, "yakuman_multiplier": 2})
     elif len(wind_koutsu) == 3 and jantai in WINDS:
         yakuman.append({"name": "shousuushii", "han_closed": 13, "han_open": 13, "is_yakuman": True})
 
@@ -295,7 +308,14 @@ def _check_yakuman(pattern, all_mentsu, melds, win_tile, win_type, all_tiles, is
                     ok = False
                     break
             if ok and len(remaining) == 1:
-                yakuman.append({"name": "chuurenpoutou", "han_closed": 13, "han_open": 0, "is_yakuman": True})
+                # 純正九蓮宝燈: 和了牌を除いた13枚がちょうど1112345678999ならダブル役満
+                tiles_13 = list(all_tiles)
+                tiles_13.remove(win_tile)
+                from tiles import sort_tiles
+                is_junsei = sort_tiles(tiles_13) == sort_tiles(base)
+                multiplier = 2 if is_junsei else 1
+                yakuman.append({"name": "chuurenpoutou", "han_closed": 13, "han_open": 0,
+                                "is_yakuman": True, "yakuman_multiplier": multiplier})
 
     return yakuman or None
 

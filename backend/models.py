@@ -37,6 +37,7 @@ class YakuResult(BaseModel):
     han_closed: int
     han_open: int
     is_yakuman: bool
+    yakuman_multiplier: int = 1  # 1=役満, 2=ダブル役満
 
 
 class Payment(BaseModel):

@@ -24,6 +24,7 @@ tensu-keisan/
 ├── backend/
 │   ├── main.py          # FastAPIエントリポイント
 │   ├── models.py        # リクエスト/レスポンスのPydanticモデル
+│   ├── tiles.py         # 牌ユーティリティ（正規化・赤ドラ・ドラ変換）
 │   ├── agari.py         # 和了判定ロジック
 │   ├── yaku.py          # 役判定ロジック
 │   ├── fu.py            # 符計算ロジック
@@ -50,7 +51,6 @@ tensu-keisan/
 ### 対象外（簡略化）
 - 流し満貫
 - 天和・地和
-- ダブル役満の区別（すべて役満として扱う）
 - 三人麻雀
 
 ---
@@ -64,6 +64,9 @@ tensu-keisan/
   例) 1m=一萬, 5p=五筒, 9s=九索
 
 字牌: 東|南|西|北|白|發|中
+
+赤ドラ: r5m | r5p | r5s
+  通常の5牌として処理されつつ、1枚につき1ドラとして加算される
 ```
 
 ### APIエンドポイント
@@ -150,15 +153,26 @@ GET /health
   - 手牌全体が「4面子 + 1雀頭」に分割できること
   - 面子: 順子（連続する同種3枚）または刻子（同じ牌3枚）
   - 雀頭: 同じ牌2枚
+  - 副露がある場合は「(4 - 副露数)面子 + 1雀頭」を閉じた手牌から探す
   - 分割方法が複数ある場合はすべての解釈で役・符を計算し、最高得点を採用
 
 七対子:
-  - 7種類の対子で構成される14枚
+  - 7種類の対子で構成される14枚（副露なしのみ）
   - 同じ牌4枚は対子2つとして扱わない
 
 国士無双:
-  - 1m9m1p9p1s9s東南西北白發中 を各1枚以上含み
+  - 1m9m1p9p1s9s東南西北白發中 を各1枚以上含み（副露なしのみ）
   - そのうちいずれか1種を2枚持つ
+```
+
+### 門前判定
+
+```
+門前（is_closed=true）の条件:
+  - チー・ポン・明槓がない場合
+  - 暗槓のみがある場合も門前とみなす
+
+門前が必要な役: 立直・一発・門前清自摸和・平和・一盃口・二盃口・九蓮宝燈・四暗刻・国士無双
 ```
 
 ### 役判定 (`yaku.py`)
@@ -185,17 +199,17 @@ GET /health
 | 清老頭 | 役満 | 役満 | 全牌が1・9のみ |
 | 対々和 | 2翻 | 2翻 | 全面子が刻子 |
 | 三暗刻 | 2翻 | 2翻 | 暗刻が3組 |
-| 四暗刻 | 役満 | - | 暗刻が4組（ロン和了は対々和＋三暗刻）|
+| 四暗刻 | 役満 | - | 暗刻（暗槓含む）が4組・チー/ポン/明槓なし。ロン和了の当たり刻子は明刻扱いとなり不成立。単騎待ちはダブル役満 |
 | 小三元 | 2翻 | 2翻 | 白・發・中のうち2種を刻子、1種を雀頭 |
 | 大三元 | 役満 | 役満 | 白・發・中をすべて刻子 |
 | 混一色 | 3翻 | 2翻 | 1種の数牌＋字牌のみ |
 | 清一色 | 6翻 | 5翻 | 1種の数牌のみ |
 | 小四喜 | 役満 | 役満 | 東南西北のうち3種を刻子、1種を雀頭 |
-| 大四喜 | 役満 | 役満 | 東南西北をすべて刻子 |
+| 大四喜 | ダブル役満 | ダブル役満 | 東南西北をすべて刻子 |
 | 字一色 | 役満 | 役満 | 全牌が字牌のみ |
 | 緑一色 | 役満 | 役満 | 2s3s4s6s8s發のみで構成 |
-| 九蓮宝燈 | 役満 | - | 同種で1112345678999＋任意1枚 |
-| 国士無双 | 役満 | - | 上記参照 |
+| 九蓮宝燈 | 役満 | - | 同種で1112345678999＋任意1枚。純正（9面待ち）はダブル役満 |
+| 国士無双 | 役満 | - | 上記参照。十三面待ちはダブル役満 |
 | 七対子 | 2翻(25符固定) | - | 上記参照 |
 | 役牌（自風）| 1翻 | 1翻 | 自風牌の刻子 |
 | 役牌（場風）| 1翻 | 1翻 | 場風牌の刻子 |
@@ -260,7 +274,9 @@ GET /health
   跳満:   6-7翻     → 12000点（親18000点）
   倍満:   8-10翻    → 16000点（親24000点）
   三倍満: 11-12翻   → 24000点（親36000点）
-  役満:   13翻以上 or 役満役 → 32000点（親48000点）
+  役満:         13翻 → 32000点（親48000点）
+  ダブル役満:   26翻 → 64000点（親96000点）
+  ※複合役満: 複数の役満が同時に成立した場合は倍率を合算する
 
 切り上げ満貫:
   翻数が5未満でも 符×翻数の計算結果が満貫点数を超える場合は満貫として扱う
@@ -271,24 +287,27 @@ GET /health
 ## テストケース
 
 ```yaml
-# ケース1: 平和ツモ
+# ケース1: 門前ツモ・一気通貫
 request:
-  hand: { closed: [1m, 2m, 3m, 4p, 5p, 6p, 7s, 8s, 9s, 2m, 3m] }
-  win_tile: 1m
+  hand:
+    closed: [1m, 2m, 3m, 4m, 5m, 6m, 7m, 8m, 9m, 東, 東, 白, 白]
+    melds: []
+  win_tile: 白
   win_type: tsumo
-  context: { seat_wind: east, round_wind: east, is_riichi: false }
+  context: { seat_wind: south, round_wind: east }
 expected:
   is_agari: true
-  yaku: [menzen_tsumo, pinfu]
-  han_total: 2
-  fu_total: 20
+  yaku: [menzen_tsumo, ittsu, yakuhai_白, honitsu]
+  han_total: 6
 
-# ケース2: リーチ一発ツモ
+# ケース2: リーチ一発ツモ（断幺九）
 request:
-  hand: { closed: [1m, 2m, 3m, 1p, 1p, 1p, 1s, 2s, 3s, 4s, 5s] }
-  win_tile: 6s
+  hand:
+    closed: [2m, 3m, 4m, 3p, 4p, 5p, 6s, 7s, 8s, 2s, 2s, 5m, 6m]
+    melds: []
+  win_tile: 7m
   win_type: tsumo
-  context: { is_riichi: true, is_ippatsu: true }
+  context: { seat_wind: south, round_wind: east, is_riichi: true, is_ippatsu: true }
 expected:
   is_agari: true
   yaku: [riichi, ippatsu, menzen_tsumo, tanyao]
@@ -297,7 +316,9 @@ expected:
 
 # ケース3: 役なし（和了不可）
 request:
-  hand: { closed: [1m, 2m, 3m, 5p, 6p, 7p, 2s, 3s, 4s, 9m, 9m] }
+  hand:
+    closed: [1m, 2m, 3m, 5p, 6p, 7p, 2s, 3s, 4s, 9m, 9m, 東, 西]
+    melds: []
   win_tile: 9p
   win_type: ron
   context: { is_riichi: false }
@@ -305,14 +326,42 @@ expected:
   is_agari: false
   error: no_yaku
 
-# ケース4: 大三元
+# ケース4: 大三元（役満）
 request:
-  hand: { closed: [白, 白, 白, 發, 發, 發, 中, 中, 中, 1m, 1m] }
-  win_tile: 1m
+  hand:
+    closed: [白, 白, 白, 發, 發, 發, 中, 中, 中, 1m, 1m, 2m, 3m]
+    melds: []
+  win_tile: 4m
   win_type: ron
 expected:
   is_agari: true
   yaku: [daisangen]
   is_yakuman: true
-  score: { payment: { ron: 48000 } }
+  score: { payment: { ron: 32000 } }  # 子の場合
+
+# ケース5: 赤ドラ込みの断幺九
+request:
+  hand:
+    closed: [2m, 3m, r5m, 2p, 3p, 4p, 6s, 7s, 8s, 3s, 3s, 6m, 7m]
+    melds: []
+  win_tile: 8m
+  win_type: ron
+  context: { seat_wind: south, round_wind: east }
+expected:
+  is_agari: true
+  yaku: [tanyao]
+  han_total: 2  # 断幺九1翻 + 赤ドラ1翻
+
+# ケース6: 暗槓あり・リーチ・嶺上開花
+request:
+  hand:
+    closed: [1m, 2m, 3m, 4m, 5m, 6m, 7m, 8m, 9m, 東]
+    melds: [{ type: ankan, tiles: [中, 中, 中, 中] }]
+  win_tile: 東
+  win_type: tsumo
+  context: { seat_wind: south, round_wind: east, is_riichi: true, is_rinshan: true }
+expected:
+  is_agari: true
+  yaku: [riichi, menzen_tsumo, rinshan_kaihou, ittsu, yakuhai_中, honitsu]
+  han_total: 9  # 倍満
 ```

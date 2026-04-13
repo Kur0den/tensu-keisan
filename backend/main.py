@@ -99,7 +99,9 @@ def _evaluate(pattern, special_type, melds, win_tile, win_type, context, all_til
     has_yakuman = any(y["is_yakuman"] for y in yaku_list)
 
     if has_yakuman:
-        han = 13
+        # 役満倍率を合算（ダブル役満=2, トリプル=3...）
+        total_multiplier = sum(y.get("yakuman_multiplier", 1) for y in yaku_list if y["is_yakuman"])
+        han = 13 * total_multiplier
     else:
         han = sum(y["han_open"] if is_open else y["han_closed"] for y in yaku_list)
         han += dora_count + ura_dora_count
