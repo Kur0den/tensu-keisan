@@ -50,7 +50,8 @@ let meldCount = 0;
 
 // 副露を追加
 document.getElementById("add-meld").addEventListener("click", () => {
-  if (meldCount >= 4) return;
+  const current = document.querySelectorAll(".meld-item").length;
+  if (current >= 4) return;
   meldCount++;
   const id = meldCount;
 
