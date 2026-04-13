@@ -2,8 +2,39 @@
 
 ## 概要
 
-手牌・状況を入力として受け取り、和了判定・役判定・点数計算を行うCLIツール。  
+手牌・状況を入力として受け取り、和了判定・役判定・点数計算を行うWEBアプリケーション。  
 授業課題: LLMを活用した仕様駆動開発として作成。
+
+---
+
+## 技術スタック
+
+| レイヤー | 技術 |
+|----------|------|
+| バックエンド | Python / FastAPI |
+| フロントエンド | HTML + CSS + JavaScript |
+| APIフォーマット | REST / JSON |
+
+---
+
+## ディレクトリ構成
+
+```
+tensu-keisan/
+├── backend/
+│   ├── main.py          # FastAPIエントリポイント
+│   ├── models.py        # リクエスト/レスポンスのPydanticモデル
+│   ├── agari.py         # 和了判定ロジック
+│   ├── yaku.py          # 役判定ロジック
+│   ├── fu.py            # 符計算ロジック
+│   ├── score.py         # 点数計算ロジック
+│   └── tests/
+│       └── test_*.py    # 各モジュールのテスト
+└── frontend/
+    ├── index.html
+    ├── style.css
+    └── main.js
+```
 
 ---
 
@@ -35,61 +66,84 @@
 字牌: 東|南|西|北|白|發|中
 ```
 
-### 入力仕様
+### APIエンドポイント
 
-```yaml
-hand:
-  closed: [string]        # 手牌（副露を除いた閉じた部分）
-  melds:                  # 副露（0〜4個）
-    - type: "chi"|"pon"|"kan"
-      tiles: [string]
+```
+POST /calculate
+  手牌・状況を受け取り、点数計算結果を返す
 
-win_tile: string          # 和了牌
-win_type: "tsumo"|"ron"
-
-context:
-  seat_wind: "east"|"south"|"west"|"north"
-  round_wind: "east"|"south"|"west"|"north"
-  is_riichi: boolean
-  is_ippatsu: boolean
-  is_rinshan: boolean     # 嶺上開花
-  is_chankan: boolean     # 槍槓
-  is_haitei: boolean      # 海底
-  is_houtei: boolean      # 河底
-  dora: [string]          # ドラ表示牌（ドラそのものではない）
-  ura_dora: [string]      # 裏ドラ表示牌（リーチ成立時のみ有効）
+GET /health
+  サーバー死活確認用
 ```
 
-### 出力仕様
+### リクエスト仕様
 
-```yaml
-is_agari: boolean
+```json
+{
+  "hand": {
+    "closed": ["1m", "2m", "3m", "4p", "5p", "6p", "7s", "8s", "9s", "2m", "3m"],
+    "melds": [
+      {
+        "type": "chi | pon | kan",
+        "tiles": ["1m", "2m", "3m"]
+      }
+    ]
+  },
+  "win_tile": "1m",
+  "win_type": "tsumo | ron",
+  "context": {
+    "seat_wind": "east | south | west | north",
+    "round_wind": "east | south | west | north",
+    "is_riichi": false,
+    "is_ippatsu": false,
+    "is_rinshan": false,
+    "is_chankan": false,
+    "is_haitei": false,
+    "is_houtei": false,
+    "dora": ["5m"],
+    "ura_dora": ["3p"]
+  }
+}
+```
 
-# 和了時のみ
-yaku:
-  - name: string          # 役名
-    han_closed: int       # 門前時の翻数
-    han_open: int         # 副露時の翻数
-    is_yakuman: boolean
+### レスポンス仕様
 
-han_total: int
-fu_total: int             # 七対子・役満時は固定値
-score:
-  basic_points: int
-  payment:
-    tsumo_dealer: int     # ツモ時・親への支払い
-    tsumo_non_dealer: int # ツモ時・子への支払い
-    ron: int              # ロン時
+```json
+// 和了時
+{
+  "is_agari": true,
+  "yaku": [
+    {
+      "name": "pinfu",
+      "han_closed": 1,
+      "han_open": 0,
+      "is_yakuman": false
+    }
+  ],
+  "han_total": 2,
+  "fu_total": 20,
+  "score": {
+    "basic_points": 320,
+    "payment": {
+      "tsumo_dealer": 700,
+      "tsumo_non_dealer": 400,
+      "ron": 0
+    }
+  }
+}
 
-# 非和了時
-error: "no_yaku"|"not_agari"
+// 非和了時
+{
+  "is_agari": false,
+  "error": "no_yaku | not_agari"
+}
 ```
 
 ---
 
 ## 機能仕様
 
-### 和了判定
+### 和了判定 (`agari.py`)
 
 ```
 通常形:
@@ -107,7 +161,7 @@ error: "no_yaku"|"not_agari"
   - そのうちいずれか1種を2枚持つ
 ```
 
-### 役一覧
+### 役判定 (`yaku.py`)
 
 | 役名 | 門前 | 副露 | 判定条件 |
 |------|------|------|----------|
@@ -147,7 +201,7 @@ error: "no_yaku"|"not_agari"
 | 役牌（場風）| 1翻 | 1翻 | 場風牌の刻子 |
 | 役牌（三元）| 1翻 | 1翻 | 白・發・中の刻子（各1翻）|
 
-### 符計算
+### 符計算 (`fu.py`)
 
 ```
 基本符:
@@ -187,7 +241,7 @@ error: "no_yaku"|"not_agari"
 合計: 10符単位で切り上げ
 ```
 
-### 点数計算
+### 点数計算 (`score.py`)
 
 ```
 基本点 = 符 × 2^(翻数+2)
@@ -202,10 +256,10 @@ error: "no_yaku"|"not_agari"
   ツモ子払い: 基本点 × 1（100点単位で切り上げ）
 
 満貫以上（翻数での判定）:
-  満貫:   5翻  →  8000点（親12000点）
-  跳満:   6-7翻 → 12000点（親18000点）
-  倍満:   8-10翻 → 16000点（親24000点）
-  三倍満: 11-12翻 → 24000点（親36000点）
+  満貫:   5翻       →  8000点（親12000点）
+  跳満:   6-7翻     → 12000点（親18000点）
+  倍満:   8-10翻    → 16000点（親24000点）
+  三倍満: 11-12翻   → 24000点（親36000点）
   役満:   13翻以上 or 役満役 → 32000点（親48000点）
 
 切り上げ満貫:
@@ -218,30 +272,32 @@ error: "no_yaku"|"not_agari"
 
 ```yaml
 # ケース1: 平和ツモ
-input:
-  closed: [1m, 2m, 3m, 4p, 5p, 6p, 7s, 8s, 9s, 2m, 3m]
+request:
+  hand: { closed: [1m, 2m, 3m, 4p, 5p, 6p, 7s, 8s, 9s, 2m, 3m] }
   win_tile: 1m
   win_type: tsumo
   context: { seat_wind: east, round_wind: east, is_riichi: false }
 expected:
+  is_agari: true
   yaku: [menzen_tsumo, pinfu]
-  han: 2
-  fu: 20
+  han_total: 2
+  fu_total: 20
 
 # ケース2: リーチ一発ツモ
-input:
-  closed: [1m, 2m, 3m, 1p, 1p, 1p, 1s, 2s, 3s, 4s, 5s]
+request:
+  hand: { closed: [1m, 2m, 3m, 1p, 1p, 1p, 1s, 2s, 3s, 4s, 5s] }
   win_tile: 6s
   win_type: tsumo
   context: { is_riichi: true, is_ippatsu: true }
 expected:
+  is_agari: true
   yaku: [riichi, ippatsu, menzen_tsumo, tanyao]
-  han: 4
-  fu: 30
+  han_total: 4
+  fu_total: 30
 
 # ケース3: 役なし（和了不可）
-input:
-  closed: [1m, 2m, 3m, 5p, 6p, 7p, 2s, 3s, 4s, 9m, 9m]
+request:
+  hand: { closed: [1m, 2m, 3m, 5p, 6p, 7p, 2s, 3s, 4s, 9m, 9m] }
   win_tile: 9p
   win_type: ron
   context: { is_riichi: false }
@@ -250,12 +306,13 @@ expected:
   error: no_yaku
 
 # ケース4: 大三元
-input:
-  closed: [白, 白, 白, 發, 發, 發, 中, 中, 中, 1m, 1m]
+request:
+  hand: { closed: [白, 白, 白, 發, 發, 發, 中, 中, 中, 1m, 1m] }
   win_tile: 1m
   win_type: ron
 expected:
+  is_agari: true
   yaku: [daisangen]
   is_yakuman: true
-  score: { ron: 48000 }
+  score: { payment: { ron: 48000 } }
 ```

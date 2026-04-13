@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>麻雀点数計算</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>麻雀点数計算ツール</h1>
+    </header>
+
+    <main>
+      <!-- 手牌入力 -->
+      <section class="card">
+        <h2>手牌</h2>
+        <div class="field">
+          <label>閉じた手牌（スペース区切り）</label>
+          <input type="text" id="closed-hand" placeholder="例: 1m 2m 3m 4p r5p 6p 7s 8s 9s 東 東" />
+          <small>数牌: 1m〜9m / 1p〜9p / 1s〜9s　字牌: 東 南 西 北 白 發 中　赤ドラ: r5m / r5p / r5s</small>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>和了牌</label>
+            <input type="text" id="win-tile" placeholder="例: 中" maxlength="3" />
+          </div>
+          <div class="field">
+            <label>和了方法</label>
+            <div class="radio-group">
+              <label><input type="radio" name="win-type" value="tsumo" checked /> ツモ</label>
+              <label><input type="radio" name="win-type" value="ron" /> ロン</label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 副露 -->
+      <section class="card">
+        <h2>副露 <button id="add-meld" class="btn-small">+ 追加</button></h2>
+        <div id="melds-container"></div>
+      </section>
+
+      <!-- 場況 -->
+      <section class="card">
+        <h2>場況</h2>
+        <div class="row">
+          <div class="field">
+            <label>自風</label>
+            <select id="seat-wind">
+              <option value="east">東（親）</option>
+              <option value="south">南</option>
+              <option value="west">西</option>
+              <option value="north">北</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>場風</label>
+            <select id="round-wind">
+              <option value="east">東場</option>
+              <option value="south">南場</option>
+              <option value="west">西場</option>
+              <option value="north">北場</option>
+            </select>
+          </div>
+        </div>
+        <div class="checkbox-group">
+          <label><input type="checkbox" id="is-riichi" /> リーチ</label>
+          <label><input type="checkbox" id="is-ippatsu" /> 一発</label>
+          <label><input type="checkbox" id="is-haitei" /> 海底</label>
+          <label><input type="checkbox" id="is-houtei" /> 河底</label>
+          <label><input type="checkbox" id="is-rinshan" /> 嶺上開花</label>
+          <label><input type="checkbox" id="is-chankan" /> 槍槓</label>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>ドラ表示牌（スペース区切り）</label>
+            <input type="text" id="dora" placeholder="例: 5m 3p" />
+          </div>
+          <div class="field">
+            <label>裏ドラ表示牌（スペース区切り）</label>
+            <input type="text" id="ura-dora" placeholder="例: 1s" />
+          </div>
+        </div>
+      </section>
+
+      <button id="calculate-btn" class="btn-primary">計算する</button>
+
+      <!-- 結果 -->
+      <section id="result-section" class="card hidden">
+        <h2>結果</h2>
+        <div id="result-content"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/main.js"></script>
+</body>
+</html>
