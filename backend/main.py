@@ -73,7 +73,7 @@ def calculate(req: CalculateRequest):
             dummy_pattern, special_type, melds, win_tile, req.win_type,
             req.context, all_tiles, normal_dora_count, red_dora_count, ura_dora_count, is_dealer
         )
-        if result and (best is None or _total_payment(result["score"]) > _total_payment(best["score"])):
+        if _is_better_result(result, best):
             best = result
 
     for pattern in patterns:
@@ -81,7 +81,7 @@ def calculate(req: CalculateRequest):
             pattern, None, melds, win_tile, req.win_type,
             req.context, all_tiles, normal_dora_count, red_dora_count, ura_dora_count, is_dealer
         )
-        if result and (best is None or _total_payment(result["score"]) > _total_payment(best["score"])):
+        if _is_better_result(result, best):
             best = result
 
     if best is None:
@@ -132,6 +132,25 @@ def _total_payment(score) -> int:
     if p.tsumo_dealer:
         return p.tsumo_dealer + p.tsumo_non_dealer * 2
     return p.tsumo_non_dealer * 3
+
+
+def _is_better_result(candidate, current) -> bool:
+    if candidate is None:
+        return False
+    if current is None:
+        return True
+
+    candidate_key = (
+        _total_payment(candidate["score"]),
+        candidate["han_total"],
+        candidate["fu_total"],
+    )
+    current_key = (
+        _total_payment(current["score"]),
+        current["han_total"],
+        current["fu_total"],
+    )
+    return candidate_key > current_key
 
 
 def _build_dora_results(normal_dora_count: int, red_dora_count: int, ura_dora_count: int) -> list:
