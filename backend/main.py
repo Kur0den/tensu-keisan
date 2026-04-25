@@ -208,6 +208,10 @@ def _validate_request(req: CalculateRequest) -> None:
         raise HTTPException(status_code=400, detail="rinshan_requires_tsumo")
     if req.context.is_chankan and req.win_type != "ron":
         raise HTTPException(status_code=400, detail="chankan_requires_ron")
+    if req.context.is_chankan:
+        own_tiles_before_win = req.hand.closed + raw_meld_tiles
+        if normalize_tile(req.win_tile) in normalize_tiles(own_tiles_before_win):
+            raise HTTPException(status_code=400, detail="invalid_chankan_tile_visibility")
     if req.context.is_haitei and req.win_type != "tsumo":
         raise HTTPException(status_code=400, detail="haitei_requires_tsumo")
     if req.context.is_houtei and req.win_type != "ron":
