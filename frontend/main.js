@@ -20,6 +20,7 @@ const YAKU_NAMES = {
   junchan: "純全帯幺九",
   toitoi: "対々和",
   sanankou: "三暗刻",
+  sankantsu: "三槓子",
   shousangen: "小三元",
   honroutou: "混老頭",
   chiitoitsu: "七対子",

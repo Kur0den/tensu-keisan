@@ -59,6 +59,7 @@ def detect_yaku(pattern: dict, special_type, melds: list, win_tile: str, win_typ
     _add_chanta_junchan(yaku_list, pattern, all_mentsu)
     _add_toitoi(yaku_list, all_mentsu)
     _add_sanankou(yaku_list, pattern["mentsu"], melds, win_tile, win_type)
+    _add_sankantsu(yaku_list, melds)
     _add_shousangen(yaku_list, all_mentsu, pattern["jantai"])
     _add_honroutou(yaku_list, all_tiles)
     _add_yakuhai(yaku_list, all_mentsu, context)
@@ -207,6 +208,12 @@ def _add_sanankou(yaku_list, mentsu_list, melds, win_tile, win_type):
     concealed_koutsu += sum(1 for m in melds if m["type"] == "ankan")
     if concealed_koutsu >= 3:
         yaku_list.append({"name": "sanankou", "han_closed": 2, "han_open": 2, "is_yakuman": False})
+
+
+def _add_sankantsu(yaku_list, melds):
+    kan_count = sum(1 for m in melds if m["type"] in ("minkan", "ankan"))
+    if kan_count == 3:
+        yaku_list.append({"name": "sankantsu", "han_closed": 2, "han_open": 2, "is_yakuman": False})
 
 
 def _add_shousangen(yaku_list, all_mentsu, jantai):
