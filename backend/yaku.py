@@ -26,9 +26,18 @@ def detect_yaku(pattern: dict, special_type, melds: list, win_tile: str, win_typ
     yaku_list = []
 
     if special_type == "chiitoi":
+        yakuman = []
+        if all(is_jihai(t) for t in all_tiles):
+            yakuman.append({"name": "tsuuiisou", "han_closed": 13, "han_open": 13, "is_yakuman": True})
+        if all(t in GREEN_TILES for t in all_tiles):
+            yakuman.append({"name": "ryuuiisou", "han_closed": 13, "han_open": 13, "is_yakuman": True})
+        if yakuman:
+            return yakuman
+
         yaku_list.append({"name": "chiitoitsu", "han_closed": 2, "han_open": 0, "is_yakuman": False})
         _add_context_yaku(yaku_list, is_closed, win_type, context)
         _add_tanyao(yaku_list, all_tiles)
+        _add_honroutou(yaku_list, all_tiles)
         _add_honitsu_chinitsu(yaku_list, all_tiles, melds)
         return yaku_list
 

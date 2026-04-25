@@ -48,7 +48,7 @@ def calculate(req: CalculateRequest):
     all_tiles = closed_tiles + normalize_tiles(raw_meld_tiles)
 
     # 和了判定
-    is_agari, patterns, special_type = check_agari(closed_tiles, melds, win_tile)
+    is_agari, patterns, special_types = check_agari(closed_tiles, melds, win_tile)
     if not is_agari:
         return CalculateResponse(is_agari=False, error="not_agari")
 
@@ -66,22 +66,22 @@ def calculate(req: CalculateRequest):
     # 最高得点のパターンを探す
     best = None
 
-    if special_type in ("kokushi", "chiitoi"):
+    for special_type in special_types:
         dummy_pattern = {"jantai": None, "mentsu": []}
         result = _evaluate(
             dummy_pattern, special_type, melds, win_tile, req.win_type,
             req.context, all_tiles, dora_count, ura_dora_count, is_dealer
         )
-        if result:
+        if result and (best is None or _total_payment(result["score"]) > _total_payment(best["score"])):
             best = result
-    else:
-        for pattern in patterns:
-            result = _evaluate(
-                pattern, None, melds, win_tile, req.win_type,
-                req.context, all_tiles, dora_count, ura_dora_count, is_dealer
-            )
-            if result and (best is None or _total_payment(result["score"]) > _total_payment(best["score"])):
-                best = result
+
+    for pattern in patterns:
+        result = _evaluate(
+            pattern, None, melds, win_tile, req.win_type,
+            req.context, all_tiles, dora_count, ura_dora_count, is_dealer
+        )
+        if result and (best is None or _total_payment(result["score"]) > _total_payment(best["score"])):
+            best = result
 
     if best is None:
         return CalculateResponse(is_agari=False, error="no_yaku")
