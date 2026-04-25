@@ -53,6 +53,29 @@ const YAKU_NAMES = {
 const ERROR_MESSAGES = {
   not_agari: "和了形になっていません",
   no_yaku: "役がありません",
+  invalid_tile: "不正な牌表記です",
+  too_many_melds: "副露は4つまでです",
+  invalid_tile_count: "手牌・副露・和了牌の枚数が合っていません",
+  too_many_same_tile: "同じ牌が5枚以上あります",
+  riichi_conflicts_with_double_riichi: "リーチとダブルリーチは同時に指定できません",
+  ippatsu_requires_riichi: "一発にはリーチまたはダブルリーチが必要です",
+  riichi_requires_closed_hand: "リーチは門前手でのみ指定できます",
+  rinshan_requires_tsumo: "嶺上開花はツモ和了でのみ指定できます",
+  rinshan_requires_kan: "嶺上開花には明槓または暗槓が必要です",
+  chankan_requires_ron: "槍槓はロン和了でのみ指定できます",
+  invalid_chankan_tile_visibility: "槍槓では和了前の自分の手牌・副露に和了牌と同じ牌は含められません",
+  haitei_requires_tsumo: "海底摸月はツモ和了でのみ指定できます",
+  houtei_requires_ron: "河底撈魚はロン和了でのみ指定できます",
+  haitei_conflicts_with_rinshan: "海底摸月と嶺上開花は同時に指定できません",
+  houtei_conflicts_with_chankan: "河底撈魚と槍槓は同時に指定できません",
+  invalid_chi_tile_count: "チーは3枚で入力してください",
+  invalid_chi_tiles: "チーは同種の連続する数牌3枚で入力してください",
+  invalid_pon_tile_count: "ポンは牌を1種類だけ入力してください",
+  invalid_pon_tiles: "ポンは同じ牌の組み合わせとして入力してください",
+  invalid_minkan_tile_count: "明槓は牌を1種類だけ入力してください",
+  invalid_minkan_tiles: "明槓は同じ牌の組み合わせとして入力してください",
+  invalid_ankan_tile_count: "暗槓は牌を1種類だけ入力してください",
+  invalid_ankan_tiles: "暗槓は同じ牌の組み合わせとして入力してください",
 };
 
 let meldCount = 0;
@@ -119,6 +142,10 @@ document.getElementById("calculate-btn").addEventListener("click", async () => {
       body: JSON.stringify(req),
     });
     const data = await res.json();
+    if (!res.ok) {
+      renderResult({ is_agari: false, error: normalizeServerError(data) }, content);
+      return;
+    }
     renderResult(data, content);
   } catch (e) {
     content.innerHTML = `<div class="result-error">通信エラー: ${e.message}</div>`;
@@ -183,7 +210,7 @@ function buildRequest() {
 
 function renderResult(data, container) {
   if (!data.is_agari) {
-    container.innerHTML = `<div class="result-error">✗ ${ERROR_MESSAGES[data.error] || data.error}</div>`;
+    container.innerHTML = `<div class="result-error">✗ ${escapeHtml(formatError(data.error))}</div>`;
     return;
   }
 
@@ -266,4 +293,31 @@ function renderResult(data, container) {
     ${hanFuHtml}
     ${scoreHtml}
   `;
+}
+
+function normalizeServerError(data) {
+  const detail = data?.detail;
+  if (Array.isArray(detail) && detail.length > 0) {
+    const first = detail[0];
+    const location = Array.isArray(first.loc) ? first.loc.join(".") : "";
+    return `入力形式エラー${location ? ` (${location})` : ""}: ${first.msg || "値を確認してください"}`;
+  }
+  return detail || data?.error || "unknown_error";
+}
+
+function formatError(error) {
+  if (!error) return "原因不明のエラーです";
+  const [code, extra] = String(error).split(/:\s*/, 2);
+  const message = ERROR_MESSAGES[code] || error;
+  return extra ? `${message}: ${extra}` : message;
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[char]));
 }
