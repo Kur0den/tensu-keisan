@@ -20,7 +20,8 @@ def detect_yaku(pattern: dict, special_type, melds: list, win_tile: str, win_typ
         from tiles import KOKUSHI_TILES, sort_tiles
         is_juusanmen = sort_tiles(tiles_13) == sort_tiles(KOKUSHI_TILES)
         multiplier = 2 if is_juusanmen else 1
-        return [{"name": "kokushi_musou", "han_closed": 13, "han_open": 0,
+        name = "kokushi_musou_juusanmen" if is_juusanmen else "kokushi_musou"
+        return [{"name": name, "han_closed": 13, "han_open": 0,
                  "is_yakuman": True, "yakuman_multiplier": multiplier}]
 
     yaku_list = []
@@ -281,8 +282,10 @@ def _check_yakuman(pattern, all_mentsu, melds, win_tile, win_type, all_tiles, is
         if concealed_koutsu + ankan_count == 4:
             # 四暗刻単騎待ちはダブル役満
             wait_types = _get_wait_types(pattern, win_tile)
-            multiplier = 2 if "tanki" in wait_types else 1
-            yakuman.append({"name": "suuankou", "han_closed": 13, "han_open": 0,
+            is_tanki = "tanki" in wait_types
+            multiplier = 2 if is_tanki else 1
+            name = "suuankou_tanki" if is_tanki else "suuankou"
+            yakuman.append({"name": name, "han_closed": 13, "han_open": 0,
                             "is_yakuman": True, "yakuman_multiplier": multiplier})
 
     # 小四喜・大四喜
@@ -336,7 +339,8 @@ def _check_yakuman(pattern, all_mentsu, melds, win_tile, win_type, all_tiles, is
                 from tiles import sort_tiles
                 is_junsei = sort_tiles(tiles_13) == sort_tiles(base)
                 multiplier = 2 if is_junsei else 1
-                yakuman.append({"name": "chuurenpoutou", "han_closed": 13, "han_open": 0,
+                name = "junsei_chuurenpoutou" if is_junsei else "chuurenpoutou"
+                yakuman.append({"name": name, "han_closed": 13, "han_open": 0,
                                 "is_yakuman": True, "yakuman_multiplier": multiplier})
 
     return yakuman or None
