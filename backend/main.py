@@ -127,7 +127,11 @@ def _evaluate(pattern, special_type, melds, win_tile, win_type, context, all_til
 
 def _total_payment(score) -> int:
     p = score.payment
-    return p.ron + p.tsumo_dealer + p.tsumo_non_dealer
+    if p.ron:
+        return p.ron
+    if p.tsumo_dealer:
+        return p.tsumo_dealer + p.tsumo_non_dealer * 2
+    return p.tsumo_non_dealer * 3
 
 
 def _build_dora_results(normal_dora_count: int, red_dora_count: int, ura_dora_count: int) -> list:
