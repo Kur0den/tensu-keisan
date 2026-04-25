@@ -16,7 +16,10 @@ def calculate_fu(pattern: dict, special_type, melds: list, win_tile: str, win_ty
     round_wind = WIND_TO_TILE.get(context.round_wind, "東")
 
     # 平和チェック
-    all_shuntsu = all(m["type"] == "shuntsu" for m in mentsu_list)
+    all_shuntsu = (
+        all(m["type"] == "shuntsu" for m in mentsu_list)
+        and not melds
+    )
     jantai_not_yakuhai = (
         jantai not in SANGENPAI
         and jantai != seat_wind

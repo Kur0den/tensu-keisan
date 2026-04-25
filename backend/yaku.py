@@ -51,7 +51,7 @@ def detect_yaku(pattern: dict, special_type, melds: list, win_tile: str, win_typ
 
     _add_context_yaku(yaku_list, is_closed, win_type, context)
     _add_tanyao(yaku_list, all_tiles)
-    _add_pinfu(yaku_list, pattern, melds, win_tile, context, is_closed)
+    _add_pinfu(yaku_list, pattern, all_mentsu, win_tile, context, is_closed)
     _add_peiko(yaku_list, pattern["mentsu"], is_closed)
     _add_sanshoku_doujun(yaku_list, all_mentsu)
     _add_sanshoku_doukou(yaku_list, all_mentsu)
@@ -104,15 +104,14 @@ def _add_tanyao(yaku_list, all_tiles):
         yaku_list.append({"name": "tanyao", "han_closed": 1, "han_open": 1, "is_yakuman": False})
 
 
-def _add_pinfu(yaku_list, pattern, melds, win_tile, context, is_closed):
+def _add_pinfu(yaku_list, pattern, all_mentsu, win_tile, context, is_closed):
     if not is_closed:
         return
     seat_wind = WIND_TO_TILE.get(context.seat_wind, "東")
     round_wind = WIND_TO_TILE.get(context.round_wind, "東")
     jantai = pattern["jantai"]
-    mentsu_list = pattern["mentsu"]
 
-    if not all(m["type"] == "shuntsu" for m in mentsu_list):
+    if not all(m["type"] == "shuntsu" for m in all_mentsu):
         return
     if jantai in SANGENPAI or jantai == seat_wind or jantai == round_wind:
         return
