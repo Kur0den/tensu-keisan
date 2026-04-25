@@ -85,7 +85,7 @@ def _build_all_mentsu(pattern: dict, melds: list) -> list:
 def _add_context_yaku(yaku_list, is_closed, win_type, context):
     if context.is_riichi and is_closed:
         yaku_list.append({"name": "riichi", "han_closed": 1, "han_open": 0, "is_yakuman": False})
-    if context.is_ippatsu and is_closed:
+    if context.is_ippatsu and context.is_riichi and is_closed:
         yaku_list.append({"name": "ippatsu", "han_closed": 1, "han_open": 0, "is_yakuman": False})
     if win_type == "tsumo" and is_closed:
         yaku_list.append({"name": "menzen_tsumo", "han_closed": 1, "han_open": 0, "is_yakuman": False})
@@ -93,9 +93,9 @@ def _add_context_yaku(yaku_list, is_closed, win_type, context):
         yaku_list.append({"name": "haitei", "han_closed": 1, "han_open": 1, "is_yakuman": False})
     if context.is_houtei and win_type == "ron":
         yaku_list.append({"name": "houtei", "han_closed": 1, "han_open": 1, "is_yakuman": False})
-    if context.is_rinshan:
+    if context.is_rinshan and win_type == "tsumo":
         yaku_list.append({"name": "rinshan_kaihou", "han_closed": 1, "han_open": 1, "is_yakuman": False})
-    if context.is_chankan:
+    if context.is_chankan and win_type == "ron":
         yaku_list.append({"name": "chankan", "han_closed": 1, "han_open": 1, "is_yakuman": False})
 
 

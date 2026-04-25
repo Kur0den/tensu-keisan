@@ -56,9 +56,10 @@ def calculate(req: CalculateRequest):
 
     # ドラカウント（通常ドラ + 裏ドラ + 赤ドラ）
     dora_tiles = [dora_from_indicator(normalize_tile(d)) for d in req.context.dora]
+    is_open = _has_open_meld(melds)
     ura_dora_tiles = (
         [dora_from_indicator(normalize_tile(d)) for d in req.context.ura_dora]
-        if req.context.is_riichi else []
+        if req.context.is_riichi and not is_open else []
     )
     dora_count = sum(all_tiles.count(d) for d in dora_tiles) + red_dora_count
     ura_dora_count = sum(all_tiles.count(d) for d in ura_dora_tiles)
@@ -103,7 +104,7 @@ def _evaluate(pattern, special_type, melds, win_tile, win_type, context, all_til
 
     fu = calculate_fu(pattern, special_type, melds, win_tile, win_type, context)
     # 暗槓は門前扱いのため、チー・ポン・明槓があるときのみ open
-    is_open = any(m["type"] in ("chi", "pon", "minkan") for m in melds)
+    is_open = _has_open_meld(melds)
     has_yakuman = any(y["is_yakuman"] for y in yaku_list)
 
     if has_yakuman:
@@ -155,6 +156,8 @@ def _validate_request(req: CalculateRequest) -> None:
 
     if req.context.is_ippatsu and not req.context.is_riichi:
         raise HTTPException(status_code=400, detail="ippatsu_requires_riichi")
+    if req.context.is_riichi and any(m.type in ("chi", "pon", "minkan") for m in req.hand.melds):
+        raise HTTPException(status_code=400, detail="riichi_requires_closed_hand")
     if req.context.is_rinshan and req.win_type != "tsumo":
         raise HTTPException(status_code=400, detail="rinshan_requires_tsumo")
     if req.context.is_chankan and req.win_type != "ron":
@@ -188,6 +191,10 @@ def _validate_meld(meld_type: str, tiles: list[str]) -> None:
         raise HTTPException(status_code=400, detail=f"invalid_{meld_type}_tile_count")
     if len(set(normalized)) != 1:
         raise HTTPException(status_code=400, detail=f"invalid_{meld_type}_tiles")
+
+
+def _has_open_meld(melds: list) -> bool:
+    return any(m["type"] in ("chi", "pon", "minkan") for m in melds)
 
 
 @app.get("/health")
