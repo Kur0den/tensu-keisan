@@ -40,6 +40,9 @@ const YAKU_NAMES = {
   yakuhai_中: "役牌（中）",
   yakuhai_jikaze: "役牌（自風）",
   yakuhai_bakaze: "役牌（場風）",
+  dora: "ドラ",
+  aka_dora: "赤ドラ",
+  ura_dora: "裏ドラ",
 };
 
 const ERROR_MESSAGES = {
@@ -179,6 +182,8 @@ function renderResult(data, container) {
   }
 
   const isYakuman = data.yaku.some((y) => y.is_yakuman);
+  const isOpen = Array.from(document.querySelectorAll('[data-role="meld-type"]'))
+    .some((select) => ["chi", "pon", "minkan"].includes(select.value));
   const yakumanMultiplier = isYakuman ? data.han_total / 13 : 0;
   const yakumanLabel = ["", "役満", "ダブル役満", "トリプル役満"][yakumanMultiplier] ?? `${yakumanMultiplier}倍役満`;
 
@@ -190,7 +195,8 @@ function renderResult(data, container) {
       if (y.is_yakuman) {
         hanStr = (y.yakuman_multiplier ?? 1) >= 2 ? "ダブル役満" : "役満";
       } else {
-        hanStr = `${y.han_closed}翻`;
+        const han = isOpen ? y.han_open : y.han_closed;
+        hanStr = `${han}翻`;
       }
       const cls = y.is_yakuman ? "yaku-tag yakuman" : "yaku-tag";
       return `<span class="${cls}">${name}（${hanStr}）</span>`;

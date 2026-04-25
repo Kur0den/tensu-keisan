@@ -61,7 +61,7 @@ def calculate(req: CalculateRequest):
         [dora_from_indicator(normalize_tile(d)) for d in req.context.ura_dora]
         if req.context.is_riichi and not is_open else []
     )
-    dora_count = sum(all_tiles.count(d) for d in dora_tiles) + red_dora_count
+    normal_dora_count = sum(all_tiles.count(d) for d in dora_tiles)
     ura_dora_count = sum(all_tiles.count(d) for d in ura_dora_tiles)
 
     # 最高得点のパターンを探す
@@ -71,7 +71,7 @@ def calculate(req: CalculateRequest):
         dummy_pattern = {"jantai": None, "mentsu": []}
         result = _evaluate(
             dummy_pattern, special_type, melds, win_tile, req.win_type,
-            req.context, all_tiles, dora_count, ura_dora_count, is_dealer
+            req.context, all_tiles, normal_dora_count, red_dora_count, ura_dora_count, is_dealer
         )
         if result and (best is None or _total_payment(result["score"]) > _total_payment(best["score"])):
             best = result
@@ -79,7 +79,7 @@ def calculate(req: CalculateRequest):
     for pattern in patterns:
         result = _evaluate(
             pattern, None, melds, win_tile, req.win_type,
-            req.context, all_tiles, dora_count, ura_dora_count, is_dealer
+            req.context, all_tiles, normal_dora_count, red_dora_count, ura_dora_count, is_dealer
         )
         if result and (best is None or _total_payment(result["score"]) > _total_payment(best["score"])):
             best = result
@@ -97,11 +97,12 @@ def calculate(req: CalculateRequest):
 
 
 def _evaluate(pattern, special_type, melds, win_tile, win_type, context, all_tiles,
-              dora_count, ura_dora_count, is_dealer):
+              normal_dora_count, red_dora_count, ura_dora_count, is_dealer):
     yaku_list = detect_yaku(pattern, special_type, melds, win_tile, win_type, context, all_tiles)
     if not yaku_list:
         return None
 
+    display_yaku = list(yaku_list)
     fu = calculate_fu(pattern, special_type, melds, win_tile, win_type, context)
     # 暗槓は門前扱いのため、チー・ポン・明槓があるときのみ open
     is_open = _has_open_meld(melds)
@@ -113,19 +114,37 @@ def _evaluate(pattern, special_type, melds, win_tile, win_type, context, all_til
         han = 13 * total_multiplier
     else:
         han = sum(y["han_open"] if is_open else y["han_closed"] for y in yaku_list)
-        han += dora_count + ura_dora_count
+        han += normal_dora_count + red_dora_count + ura_dora_count
+        display_yaku.extend(_build_dora_results(normal_dora_count, red_dora_count, ura_dora_count))
 
     if han == 0:
         return None
 
     score = calculate_score(han, fu, win_type, is_dealer)
 
-    return {"yaku": yaku_list, "han_total": han, "fu_total": fu, "score": score}
+    return {"yaku": display_yaku, "han_total": han, "fu_total": fu, "score": score}
 
 
 def _total_payment(score) -> int:
     p = score.payment
     return p.ron + p.tsumo_dealer + p.tsumo_non_dealer
+
+
+def _build_dora_results(normal_dora_count: int, red_dora_count: int, ura_dora_count: int) -> list:
+    results = []
+    for name, count in (
+        ("dora", normal_dora_count),
+        ("aka_dora", red_dora_count),
+        ("ura_dora", ura_dora_count),
+    ):
+        if count > 0:
+            results.append({
+                "name": name,
+                "han_closed": count,
+                "han_open": count,
+                "is_yakuman": False,
+            })
+    return results
 
 
 def _validate_request(req: CalculateRequest) -> None:
