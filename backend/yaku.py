@@ -116,8 +116,8 @@ def _add_pinfu(yaku_list, pattern, all_mentsu, win_tile, context, is_closed):
     if jantai in SANGENPAI or jantai == seat_wind or jantai == round_wind:
         return
 
-    wait_type = _get_wait_type(pattern, win_tile)
-    if wait_type == "ryanmen":
+    wait_types = _get_wait_types(pattern, win_tile)
+    if "ryanmen" in wait_types:
         yaku_list.append({"name": "pinfu", "han_closed": 1, "han_open": 0, "is_yakuman": False})
 
 
@@ -271,8 +271,8 @@ def _check_yakuman(pattern, all_mentsu, melds, win_tile, win_type, all_tiles, is
         ankan_count = sum(1 for m in melds if m["type"] == "ankan")
         if concealed_koutsu + ankan_count == 4:
             # 四暗刻単騎待ちはダブル役満
-            wait_type = _get_wait_type(pattern, win_tile)
-            multiplier = 2 if wait_type == "tanki" else 1
+            wait_types = _get_wait_types(pattern, win_tile)
+            multiplier = 2 if "tanki" in wait_types else 1
             yakuman.append({"name": "suuankou", "han_closed": 13, "han_open": 0,
                             "is_yakuman": True, "yakuman_multiplier": multiplier})
 
@@ -334,24 +334,34 @@ def _check_yakuman(pattern, all_mentsu, melds, win_tile, win_type, all_tiles, is
 
 
 def _get_wait_type(pattern: dict, win_tile: str) -> str:
+    wait_types = _get_wait_types(pattern, win_tile)
+    for wait_type in ("tanki", "kanchan", "penchan", "shanpon", "ryanmen"):
+        if wait_type in wait_types:
+            return wait_type
+    return "tanki"
+
+
+def _get_wait_types(pattern: dict, win_tile: str) -> set:
     jantai = pattern["jantai"]
     mentsu_list = pattern["mentsu"]
+    wait_types = set()
 
     if win_tile == jantai:
-        return "tanki"
+        wait_types.add("tanki")
 
     for m in mentsu_list:
         if win_tile not in m["tiles"]:
             continue
         if m["type"] == "koutsu":
-            return "shanpon"
+            wait_types.add("shanpon")
+            continue
         nums = sorted(int(t[0]) for t in m["tiles"])
         win_num = int(win_tile[0])
         if win_num == nums[1]:
-            return "kanchan"
+            wait_types.add("kanchan")
         if win_num == nums[0]:
-            return "penchan" if nums[2] == 9 else "ryanmen"
+            wait_types.add("penchan" if nums[2] == 9 else "ryanmen")
         if win_num == nums[2]:
-            return "penchan" if nums[0] == 1 else "ryanmen"
+            wait_types.add("penchan" if nums[0] == 1 else "ryanmen")
 
-    return "tanki"
+    return wait_types or {"tanki"}
