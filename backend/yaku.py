@@ -84,9 +84,11 @@ def _build_all_mentsu(pattern: dict, melds: list) -> list:
 
 
 def _add_context_yaku(yaku_list, is_closed, win_type, context):
-    if context.is_riichi and is_closed:
+    if context.is_double_riichi and is_closed:
+        yaku_list.append({"name": "double_riichi", "han_closed": 2, "han_open": 0, "is_yakuman": False})
+    elif context.is_riichi and is_closed:
         yaku_list.append({"name": "riichi", "han_closed": 1, "han_open": 0, "is_yakuman": False})
-    if context.is_ippatsu and context.is_riichi and is_closed:
+    if context.is_ippatsu and (context.is_riichi or context.is_double_riichi) and is_closed:
         yaku_list.append({"name": "ippatsu", "han_closed": 1, "han_open": 0, "is_yakuman": False})
     if win_type == "tsumo" and is_closed:
         yaku_list.append({"name": "menzen_tsumo", "han_closed": 1, "han_open": 0, "is_yakuman": False})

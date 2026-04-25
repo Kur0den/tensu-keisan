@@ -3,6 +3,7 @@ const API_BASE = "";  // FastAPI経由で配信するので相対パスでOK
 // 役名の日本語マッピング
 const YAKU_NAMES = {
   riichi: "立直",
+  double_riichi: "ダブル立直",
   ippatsu: "一発",
   menzen_tsumo: "門前清自摸和",
   haitei: "海底摸月",
@@ -165,6 +166,7 @@ function buildRequest() {
       seat_wind: document.getElementById("seat-wind").value,
       round_wind: document.getElementById("round-wind").value,
       is_riichi: document.getElementById("is-riichi").checked,
+      is_double_riichi: document.getElementById("is-double-riichi").checked,
       is_ippatsu: document.getElementById("is-ippatsu").checked,
       is_haitei: document.getElementById("is-haitei").checked,
       is_houtei: document.getElementById("is-houtei").checked,

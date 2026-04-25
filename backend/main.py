@@ -57,9 +57,10 @@ def calculate(req: CalculateRequest):
     # ドラカウント（通常ドラ + 裏ドラ + 赤ドラ）
     dora_tiles = [dora_from_indicator(normalize_tile(d)) for d in req.context.dora]
     is_open = _has_open_meld(melds)
+    has_riichi = req.context.is_riichi or req.context.is_double_riichi
     ura_dora_tiles = (
         [dora_from_indicator(normalize_tile(d)) for d in req.context.ura_dora]
-        if req.context.is_riichi and not is_open else []
+        if has_riichi and not is_open else []
     )
     normal_dora_count = sum(all_tiles.count(d) for d in dora_tiles)
     ura_dora_count = sum(all_tiles.count(d) for d in ura_dora_tiles)
@@ -196,9 +197,12 @@ def _validate_request(req: CalculateRequest) -> None:
     if over_limit:
         raise HTTPException(status_code=400, detail=f"too_many_same_tile: {over_limit[0]}")
 
-    if req.context.is_ippatsu and not req.context.is_riichi:
+    has_riichi = req.context.is_riichi or req.context.is_double_riichi
+    if req.context.is_riichi and req.context.is_double_riichi:
+        raise HTTPException(status_code=400, detail="riichi_conflicts_with_double_riichi")
+    if req.context.is_ippatsu and not has_riichi:
         raise HTTPException(status_code=400, detail="ippatsu_requires_riichi")
-    if req.context.is_riichi and any(m.type in ("chi", "pon", "minkan") for m in req.hand.melds):
+    if has_riichi and any(m.type in ("chi", "pon", "minkan") for m in req.hand.melds):
         raise HTTPException(status_code=400, detail="riichi_requires_closed_hand")
     if req.context.is_rinshan and req.win_type != "tsumo":
         raise HTTPException(status_code=400, detail="rinshan_requires_tsumo")
