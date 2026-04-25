@@ -206,6 +206,8 @@ def _validate_request(req: CalculateRequest) -> None:
         raise HTTPException(status_code=400, detail="riichi_requires_closed_hand")
     if req.context.is_rinshan and req.win_type != "tsumo":
         raise HTTPException(status_code=400, detail="rinshan_requires_tsumo")
+    if req.context.is_rinshan and not any(m.type in ("minkan", "ankan") for m in req.hand.melds):
+        raise HTTPException(status_code=400, detail="rinshan_requires_kan")
     if req.context.is_chankan and req.win_type != "ron":
         raise HTTPException(status_code=400, detail="chankan_requires_ron")
     if req.context.is_chankan:
