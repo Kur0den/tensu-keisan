@@ -20,15 +20,25 @@ def detect_yaku(pattern: dict, special_type, melds: list, win_tile: str, win_typ
         from tiles import KOKUSHI_TILES, sort_tiles
         is_juusanmen = sort_tiles(tiles_13) == sort_tiles(KOKUSHI_TILES)
         multiplier = 2 if is_juusanmen else 1
-        return [{"name": "kokushi_musou", "han_closed": 13, "han_open": 0,
+        name = "kokushi_musou_juusanmen" if is_juusanmen else "kokushi_musou"
+        return [{"name": name, "han_closed": 13, "han_open": 0,
                  "is_yakuman": True, "yakuman_multiplier": multiplier}]
 
     yaku_list = []
 
     if special_type == "chiitoi":
+        yakuman = []
+        if all(is_jihai(t) for t in all_tiles):
+            yakuman.append({"name": "tsuuiisou", "han_closed": 13, "han_open": 13, "is_yakuman": True})
+        if all(t in GREEN_TILES for t in all_tiles):
+            yakuman.append({"name": "ryuuiisou", "han_closed": 13, "han_open": 13, "is_yakuman": True})
+        if yakuman:
+            return yakuman
+
         yaku_list.append({"name": "chiitoitsu", "han_closed": 2, "han_open": 0, "is_yakuman": False})
         _add_context_yaku(yaku_list, is_closed, win_type, context)
         _add_tanyao(yaku_list, all_tiles)
+        _add_honroutou(yaku_list, all_tiles)
         _add_honitsu_chinitsu(yaku_list, all_tiles, melds)
         return yaku_list
 
@@ -42,7 +52,7 @@ def detect_yaku(pattern: dict, special_type, melds: list, win_tile: str, win_typ
 
     _add_context_yaku(yaku_list, is_closed, win_type, context)
     _add_tanyao(yaku_list, all_tiles)
-    _add_pinfu(yaku_list, pattern, melds, win_tile, context, is_closed)
+    _add_pinfu(yaku_list, pattern, all_mentsu, win_tile, context, is_closed)
     _add_peiko(yaku_list, pattern["mentsu"], is_closed)
     _add_sanshoku_doujun(yaku_list, all_mentsu)
     _add_sanshoku_doukou(yaku_list, all_mentsu)
@@ -50,6 +60,7 @@ def detect_yaku(pattern: dict, special_type, melds: list, win_tile: str, win_typ
     _add_chanta_junchan(yaku_list, pattern, all_mentsu)
     _add_toitoi(yaku_list, all_mentsu)
     _add_sanankou(yaku_list, pattern["mentsu"], melds, win_tile, win_type)
+    _add_sankantsu(yaku_list, melds)
     _add_shousangen(yaku_list, all_mentsu, pattern["jantai"])
     _add_honroutou(yaku_list, all_tiles)
     _add_yakuhai(yaku_list, all_mentsu, context)
@@ -74,9 +85,11 @@ def _build_all_mentsu(pattern: dict, melds: list) -> list:
 
 
 def _add_context_yaku(yaku_list, is_closed, win_type, context):
-    if context.is_riichi and is_closed:
+    if context.is_double_riichi and is_closed:
+        yaku_list.append({"name": "double_riichi", "han_closed": 2, "han_open": 0, "is_yakuman": False})
+    elif context.is_riichi and is_closed:
         yaku_list.append({"name": "riichi", "han_closed": 1, "han_open": 0, "is_yakuman": False})
-    if context.is_ippatsu and is_closed:
+    if context.is_ippatsu and (context.is_riichi or context.is_double_riichi) and is_closed:
         yaku_list.append({"name": "ippatsu", "han_closed": 1, "han_open": 0, "is_yakuman": False})
     if win_type == "tsumo" and is_closed:
         yaku_list.append({"name": "menzen_tsumo", "han_closed": 1, "han_open": 0, "is_yakuman": False})
@@ -84,9 +97,9 @@ def _add_context_yaku(yaku_list, is_closed, win_type, context):
         yaku_list.append({"name": "haitei", "han_closed": 1, "han_open": 1, "is_yakuman": False})
     if context.is_houtei and win_type == "ron":
         yaku_list.append({"name": "houtei", "han_closed": 1, "han_open": 1, "is_yakuman": False})
-    if context.is_rinshan:
+    if context.is_rinshan and win_type == "tsumo":
         yaku_list.append({"name": "rinshan_kaihou", "han_closed": 1, "han_open": 1, "is_yakuman": False})
-    if context.is_chankan:
+    if context.is_chankan and win_type == "ron":
         yaku_list.append({"name": "chankan", "han_closed": 1, "han_open": 1, "is_yakuman": False})
 
 
@@ -95,21 +108,20 @@ def _add_tanyao(yaku_list, all_tiles):
         yaku_list.append({"name": "tanyao", "han_closed": 1, "han_open": 1, "is_yakuman": False})
 
 
-def _add_pinfu(yaku_list, pattern, melds, win_tile, context, is_closed):
+def _add_pinfu(yaku_list, pattern, all_mentsu, win_tile, context, is_closed):
     if not is_closed:
         return
     seat_wind = WIND_TO_TILE.get(context.seat_wind, "東")
     round_wind = WIND_TO_TILE.get(context.round_wind, "東")
     jantai = pattern["jantai"]
-    mentsu_list = pattern["mentsu"]
 
-    if not all(m["type"] == "shuntsu" for m in mentsu_list):
+    if not all(m["type"] == "shuntsu" for m in all_mentsu):
         return
     if jantai in SANGENPAI or jantai == seat_wind or jantai == round_wind:
         return
 
-    wait_type = _get_wait_type(pattern, win_tile)
-    if wait_type == "ryanmen":
+    wait_types = _get_wait_types(pattern, win_tile)
+    if "ryanmen" in wait_types:
         yaku_list.append({"name": "pinfu", "han_closed": 1, "han_open": 0, "is_yakuman": False})
 
 
@@ -201,6 +213,12 @@ def _add_sanankou(yaku_list, mentsu_list, melds, win_tile, win_type):
         yaku_list.append({"name": "sanankou", "han_closed": 2, "han_open": 2, "is_yakuman": False})
 
 
+def _add_sankantsu(yaku_list, melds):
+    kan_count = sum(1 for m in melds if m["type"] in ("minkan", "ankan"))
+    if kan_count == 3:
+        yaku_list.append({"name": "sankantsu", "han_closed": 2, "han_open": 2, "is_yakuman": False})
+
+
 def _add_shousangen(yaku_list, all_mentsu, jantai):
     if jantai not in SANGENPAI:
         return
@@ -263,9 +281,11 @@ def _check_yakuman(pattern, all_mentsu, melds, win_tile, win_type, all_tiles, is
         ankan_count = sum(1 for m in melds if m["type"] == "ankan")
         if concealed_koutsu + ankan_count == 4:
             # 四暗刻単騎待ちはダブル役満
-            wait_type = _get_wait_type(pattern, win_tile)
-            multiplier = 2 if wait_type == "tanki" else 1
-            yakuman.append({"name": "suuankou", "han_closed": 13, "han_open": 0,
+            wait_types = _get_wait_types(pattern, win_tile)
+            is_tanki = "tanki" in wait_types
+            multiplier = 2 if is_tanki else 1
+            name = "suuankou_tanki" if is_tanki else "suuankou"
+            yakuman.append({"name": name, "han_closed": 13, "han_open": 0,
                             "is_yakuman": True, "yakuman_multiplier": multiplier})
 
     # 小四喜・大四喜
@@ -319,31 +339,42 @@ def _check_yakuman(pattern, all_mentsu, melds, win_tile, win_type, all_tiles, is
                 from tiles import sort_tiles
                 is_junsei = sort_tiles(tiles_13) == sort_tiles(base)
                 multiplier = 2 if is_junsei else 1
-                yakuman.append({"name": "chuurenpoutou", "han_closed": 13, "han_open": 0,
+                name = "junsei_chuurenpoutou" if is_junsei else "chuurenpoutou"
+                yakuman.append({"name": name, "han_closed": 13, "han_open": 0,
                                 "is_yakuman": True, "yakuman_multiplier": multiplier})
 
     return yakuman or None
 
 
 def _get_wait_type(pattern: dict, win_tile: str) -> str:
+    wait_types = _get_wait_types(pattern, win_tile)
+    for wait_type in ("tanki", "kanchan", "penchan", "shanpon", "ryanmen"):
+        if wait_type in wait_types:
+            return wait_type
+    return "tanki"
+
+
+def _get_wait_types(pattern: dict, win_tile: str) -> set:
     jantai = pattern["jantai"]
     mentsu_list = pattern["mentsu"]
+    wait_types = set()
 
     if win_tile == jantai:
-        return "tanki"
+        wait_types.add("tanki")
 
     for m in mentsu_list:
         if win_tile not in m["tiles"]:
             continue
         if m["type"] == "koutsu":
-            return "shanpon"
+            wait_types.add("shanpon")
+            continue
         nums = sorted(int(t[0]) for t in m["tiles"])
         win_num = int(win_tile[0])
         if win_num == nums[1]:
-            return "kanchan"
+            wait_types.add("kanchan")
         if win_num == nums[0]:
-            return "penchan" if nums[2] == 9 else "ryanmen"
+            wait_types.add("penchan" if nums[2] == 9 else "ryanmen")
         if win_num == nums[2]:
-            return "penchan" if nums[0] == 1 else "ryanmen"
+            wait_types.add("penchan" if nums[0] == 1 else "ryanmen")
 
-    return "tanki"
+    return wait_types or {"tanki"}

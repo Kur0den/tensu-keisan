@@ -8,6 +8,9 @@ KOKUSHI_TILES = ["1m","9m","1p","9p","1s","9s","東","南","西","北","白","�
 
 
 RED_DORA_TILES = frozenset(["r5m", "r5p", "r5s"])
+SUITED_TILES = frozenset(f"{n}{s}" for s in "mps" for n in range(1, 10))
+HONOR_TILES = WINDS | SANGENPAI
+VALID_TILES = SUITED_TILES | HONOR_TILES | RED_DORA_TILES
 
 
 def normalize_tile(tile: str) -> str:
@@ -19,6 +22,10 @@ def normalize_tile(tile: str) -> str:
 
 def is_red_dora(tile: str) -> bool:
     return tile in RED_DORA_TILES
+
+
+def is_valid_tile(tile: str) -> bool:
+    return tile in VALID_TILES
 
 
 def normalize_tiles(tiles: list) -> list:

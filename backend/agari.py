@@ -4,24 +4,25 @@ from tiles import sort_tiles, is_yaochuuhai, KOKUSHI_TILES
 def check_agari(closed_tiles: list, melds: list, win_tile: str):
     """
     和了判定。closed_tilesはwin_tileを含む。
-    Returns: (is_agari, patterns, special_type)
-      special_type: None | "chiitoi" | "kokushi"
+    Returns: (is_agari, patterns, special_types)
+      special_types: list containing "chiitoi" and/or "kokushi"
     """
     n_melds = len(melds)
+    special_types = []
 
     if n_melds == 0:
         if _is_kokushi(closed_tiles):
-            return True, [], "kokushi"
+            special_types.append("kokushi")
         if _is_chiitoi(closed_tiles):
-            return True, [], "chiitoi"
+            special_types.append("chiitoi")
 
     n_mentsu_needed = 4 - n_melds
     patterns = _find_patterns(closed_tiles, n_mentsu_needed)
 
-    if patterns:
-        return True, patterns, None
+    if special_types or patterns:
+        return True, patterns, special_types
 
-    return False, [], None
+    return False, [], []
 
 
 def _is_chiitoi(tiles: list) -> bool:

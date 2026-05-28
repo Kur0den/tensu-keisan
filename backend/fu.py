@@ -16,14 +16,17 @@ def calculate_fu(pattern: dict, special_type, melds: list, win_tile: str, win_ty
     round_wind = WIND_TO_TILE.get(context.round_wind, "東")
 
     # 平和チェック
-    all_shuntsu = all(m["type"] == "shuntsu" for m in mentsu_list)
+    all_shuntsu = (
+        all(m["type"] == "shuntsu" for m in mentsu_list)
+        and not melds
+    )
     jantai_not_yakuhai = (
         jantai not in SANGENPAI
         and jantai != seat_wind
         and jantai != round_wind
     )
-    wait_type = _get_wait_type(pattern, win_tile)
-    is_pinfu = not is_open and all_shuntsu and jantai_not_yakuhai and wait_type == "ryanmen"
+    wait_types = _get_wait_types(pattern, win_tile)
+    is_pinfu = not is_open and all_shuntsu and jantai_not_yakuhai and "ryanmen" in wait_types
 
     if is_pinfu:
         return 20 if win_type == "tsumo" else 30
@@ -51,7 +54,7 @@ def calculate_fu(pattern: dict, special_type, melds: list, win_tile: str, win_ty
         jantai_fu = 2
 
     # 待ち符
-    wait_fu = 2 if wait_type in ("kanchan", "penchan", "tanki") else 0
+    wait_fu = 2 if wait_types & {"kanchan", "penchan", "tanki"} else 0
 
     # ツモ符
     tsumo_fu = 2 if win_type == "tsumo" else 0
@@ -84,25 +87,35 @@ def _calc_mentsu_fu(m: dict, win_tile: str, win_type: str, is_concealed: bool) -
 
 
 def _get_wait_type(pattern: dict, win_tile: str) -> str:
+    wait_types = _get_wait_types(pattern, win_tile)
+    for wait_type in ("tanki", "kanchan", "penchan", "shanpon", "ryanmen"):
+        if wait_type in wait_types:
+            return wait_type
+    return "tanki"
+
+
+def _get_wait_types(pattern: dict, win_tile: str) -> set:
     jantai = pattern["jantai"]
     mentsu_list = pattern["mentsu"]
+    wait_types = set()
 
     if win_tile == jantai:
-        return "tanki"
+        wait_types.add("tanki")
 
     for m in mentsu_list:
         if win_tile not in m["tiles"]:
             continue
         if m["type"] == "koutsu":
-            return "shanpon"
+            wait_types.add("shanpon")
+            continue
         # 順子: 待ちの種類を判定
         nums = sorted(int(t[0]) for t in m["tiles"])
         win_num = int(win_tile[0])
         if win_num == nums[1]:
-            return "kanchan"
+            wait_types.add("kanchan")
         if win_num == nums[0]:
-            return "penchan" if nums[2] == 9 else "ryanmen"
+            wait_types.add("penchan" if nums[2] == 9 else "ryanmen")
         if win_num == nums[2]:
-            return "penchan" if nums[0] == 1 else "ryanmen"
+            wait_types.add("penchan" if nums[0] == 1 else "ryanmen")
 
-    return "tanki"
+    return wait_types or {"tanki"}

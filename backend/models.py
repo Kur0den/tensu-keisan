@@ -16,6 +16,7 @@ class Context(BaseModel):
     seat_wind: Literal["east", "south", "west", "north"] = "east"
     round_wind: Literal["east", "south", "west", "north"] = "east"
     is_riichi: bool = False
+    is_double_riichi: bool = False
     is_ippatsu: bool = False
     is_rinshan: bool = False
     is_chankan: bool = False
